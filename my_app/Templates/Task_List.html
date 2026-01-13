@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="task-header-row">
+        <h1>משימות צוות: {{ user.profile.Team }}</h1>
+        {% if user.profile.role == 'manager' %}
+            <a href="{% url 'task_create' %}" class="btn btn-primary">+ משימה חדשה</a>
+        {% endif %}
+    </div>
+
+    <div class="glass-card filters-container">
+        <form method="get" class="filters-form" id="realtime-filter-form">
+            <div class="filter-item">
+                <label for="id_worker">חיפוש לפי מבצע:</label>
+                <input type="text" id="worker-search" placeholder="הקלד שם עובד..." class="form-control">
+            </div>
+
+            <div class="filter-item filter-status">
+                <label for="status-filter">סינון לפי סטטוס:</label>
+                <select id="status-filter" class="form-control">
+                    <option value="">כל המשימות</option>
+                    <option value="Completed">מושלמות</option>
+                    <option value="In Progress">בתהליך</option>
+                    <option value="New">חדשות</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <div class="task-grid" id="task-grid">
+        {% for task in tasks %}
+            <div class="glass-card task-card-item {% if task.status == 'COMPLETED' %}completed{% endif %}"
+                 data-worker="{{ task.profile.user.username|default:'פנוי'|lower }}"
+                 data-status="{{ task.get_status_display }}">
+
+                <div class="task-header-row" style="margin-bottom: 15px;">
+                    <h3 style="margin:0;">{{ task.Title }}</h3>
+                    <span class="status-badge" style="color: var(--accent); font-weight: bold; font-size: 0.8rem;">
+                        {{ task.get_status_display }}
+                    </span>
+                </div>
+
+                <p style="color: var(--text-muted); font-size: 0.9rem;">{{ task.description }}</p>
+
+                <div class="task-info-small">
+                    <strong>מבצע:</strong> <span class="worker-name">{{ task.profile.user.username|default:"פנוי" }}</span>
+                </div>
+
+                <div class="task-btns-row">
+                    {% if user.profile.role == 'employee' %}
+                        {% if not task.profile %}
+                            <a href="{% url 'claim_task' task.id %}" class="btn btn-primary" style="width: 100%;">שייך אלי</a>
+                        {% elif task.profile == user.profile and task.status != 'COMPLETED' %}
+                            <a href="{% url 'complete_task' task.id %}" class="btn" style="background: var(--success); color: white; width: 100%;">סיימתי</a>
+                        {% endif %}
+                    {% elif user.profile.role == 'manager' %}
+                        <a href="{% url 'task_edit' task.id %}" class="btn btn-outline" style="flex: 1;">ערוך</a>
+                        <a href="{% url 'task_delete' task.id %}" style="color: var(--danger); text-decoration: none; padding-top: 8px;">מחק</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="glass-card empty-state-container">
+                <div class="empty-state-icon">
+                    <i class="fas fa-tasks"></i> </div>
+                <h3>אין משימות כעת בצוות זה</h3>
+                <p>נראה שכל המשימות הושלמו או שעדיין לא נוספו משימות חדשות.</p>
+
+                {% if user.profile.role == 'manager' %}
+                    <a href="{% url 'task_create' %}" class="btn btn-primary" style="margin-top: 15px;">הוסף משימה ראשונה</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const workerInput = document.getElementById('worker-search');
+    const statusSelect = document.getElementById('status-filter');
+    const cards = document.querySelectorAll('.task-card-item');
+
+    function filterTasks() {
+        // .trim() מסיר רווחים מיותרים אם המשתמש הקליד בטעות רווח בהתחלה
+        const workerValue = workerInput.value.toLowerCase().trim();
+        const statusValue = statusSelect.value;
+
+        cards.forEach(card => {
+            const cardWorker = card.getAttribute('data-worker').toLowerCase().trim();
+            const cardStatus = card.getAttribute('data-status');
+
+            // שינוי מ-includes ל-startsWith: בודק אם שם העובד מתחיל בערך שהוקלד
+            const matchesWorker = cardWorker.startsWith(workerValue);
+            const matchesStatus = statusValue === "" || cardStatus === statusValue;
+
+            if (matchesWorker && matchesStatus) {
+                card.style.display = '';
+                // הסרנו את ה-timeout של האנימציה כדי שהסינון ירגיש מהיר וחד יותר בזמן הקלדה
+                card.style.opacity = '1';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    workerInput.addEventListener('input', filterTasks);
+    statusSelect.addEventListener('change', filterTasks);
+});
+</script>
+<style>
+    /* תיקון קטן לסינון חלק יותר */
+    .task-card-item {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #worker-search, #status-filter {
+        margin-top: 5px;
+    }
+</style>
+
+{% endblock %}
