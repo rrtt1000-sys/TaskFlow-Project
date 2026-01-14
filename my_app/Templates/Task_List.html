@@ -55,10 +55,21 @@
                         {% elif task.profile == user.profile and task.status != 'COMPLETED' %}
                             <a href="{% url 'complete_task' task.id %}" class="btn" style="background: var(--success); color: white; width: 100%;">סיימתי</a>
                         {% endif %}
-                    {% elif user.profile.role == 'manager' %}
-                        <a href="{% url 'task_edit' task.id %}" class="btn btn-outline" style="flex: 1;">ערוך</a>
-                        <a href="{% url 'task_delete' task.id %}" style="color: var(--danger); text-decoration: none; padding-top: 8px;">מחק</a>
-                    {% endif %}
+                   {% elif user.profile.role == 'manager' %}
+
+        {% if not task.profile %}
+
+        <div style="display: flex; gap: 10px; width: 100%;">
+            <a href="{% url 'task_edit' task.id %}" class="btn btn-outline" style="flex: 1;">ערוך</a>
+            <a href="{% url 'task_delete' task.id %}" style="color: var(--danger); text-decoration: none; padding-top: 8px;">מחק</a>
+        </div>
+    {% else %}
+        {# המשימה משויכת - המנהל יראה רק חיווי שהיא בביצוע ללא אפשרות שינוי #}
+        <span style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">
+            המשימה בביצוע - לא ניתן לערוך או למחוק
+        </span>
+    {% endif %}
+{% endif %}
                 </div>
             </div>
         {% empty %}
